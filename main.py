@@ -30,7 +30,7 @@ jugador1 = {
     "rectan": pygame.Rect(pantalla_ancho//2-250, 400, 30, 80),
     "velocidad": 5,
     "fuerza_salto": 10,
-    "gravedad": 0.5,
+    "gravedad": 0.7,
     "velocidad_y": 0,
     "en_plataforma": False,
 }
@@ -40,7 +40,7 @@ jugador2 = {
     "rectan": pygame.Rect(pantalla_ancho//2+220, 400, 30, 80),
     "velocidad": 5,
     "fuerza_salto": 10,
-    "gravedad": 0.5,
+    "gravedad": 0.7,
     "velocidad_y": 0,
     "en_plataforma": False,
 }
