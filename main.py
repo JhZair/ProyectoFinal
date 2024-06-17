@@ -255,6 +255,7 @@ class Juego:
 juego = Juego()
 juego.ejecutar()
 
-##Falta agregar evento de muerte al caer de la plataforma, solucionar bug al pegarse a la plataforma por los costados,
+## Falta agregar ataque a distancia, evento de muerte al caer de la plataforma, solucionar bug al pegarse a la plataforma por los costados,
 # falta contador inicial para iniciar el juego, falta pantalla final al ganar un jugador o quedar en empate o por tiempo, faltan agregar personajes distintos con
-# características diferentes, interfaz de inicio del juego, interfaz de pausa, interfaz de selección de personajes, añadir animaciones distintas para cada personaje, etc 
+# características diferentes, interfaz de inicio del juego, interfaz de pausa, interfaz de selección de personajes, añadir animaciones distintas para cada personaje,
+# agregar dos vidas para cada jugador, agregar mecánica de empuje al recibir daño y agregar efectos de sonifo y música de fondo.
