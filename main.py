@@ -192,9 +192,7 @@ class Juego:
             print("Empate")
 
     def ejecutar(self):
-        # Mostrar el menú y esperar a que el jugador seleccione "Jugar"
         if mostrar_menu():
-            # Iniciar el juego
             inicio_tiempo = pygame.time.get_ticks()
 
             while self.ejecutando:
