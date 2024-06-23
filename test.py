@@ -6,7 +6,7 @@ from menu import mostrar_menu
 pygame.init()
 
 # Configuración de la pantalla
-pantalla_ancho = 1700
+pantalla_ancho = 1600
 pantalla_alto = 1000
 pantalla = pygame.display.set_mode((pantalla_ancho, pantalla_alto))
 pygame.display.set_caption("Pelea de dioses")
@@ -61,6 +61,7 @@ class Jugador:
         self.defendiendo = False
         self.retroceso_x = 0
         self.retroceso_y = 0
+        self.proyectiles = []
 
         # Animaciones
         self.sprites = sprites
@@ -71,7 +72,8 @@ class Jugador:
             "run_b": cargar_sprites(pygame.image.load('assets/anims/samurai/caminata_atras_samurai.png').convert_alpha(), 8, 118.25, 140, fondo_samurai),
             "jump": cargar_sprites(pygame.image.load('assets/anims/samurai/salto_samurai.png').convert_alpha(), 5, 108.2, 140, fondo_samurai),
             "attack": cargar_sprites(pygame.image.load('assets/anims/samurai/ataque_samurai.png').convert_alpha(), 5, 146.2, 140, fondo_samurai),
-            "defense": cargar_sprites(pygame.image.load('assets/anims/samurai/bloqueo_samurai.png').convert_alpha(), 4, 109, 140, fondo_samurai)
+            "defense": cargar_sprites(pygame.image.load('assets/anims/samurai/bloqueo_samurai.png').convert_alpha(), 4, 109, 140, fondo_samurai),
+            'hit': cargar_sprites(pygame.image.load('assets/anims/samurai/dañado_samurai.png').convert_alpha(), 5, 121.6, 140, fondo_samurai)
         }
         self.sprite_index = 0
         self.image = self.animaciones[self.animacion_actual][self.sprite_index]
@@ -100,10 +102,12 @@ class Jugador:
         
         if teclas[ataque]:
             self.animacion_actual = "attack"
+            if otro_jugador.aura.colliderect(self.aura):
+                otro_jugador.animacion_actual = "hit"
         
-        if self.cooldown < tiempo and self.en_plataforma and not teclas[izq] and not teclas[derecha]:
+        if self.cooldown < tiempo and not (teclas[izq] or teclas[derecha] or teclas[salto]) and otro_jugador.animacion_actual != 'attack':
             self.animacion_actual = "idle"
-        
+
         #Aplicar gravedad
         self.rectan.y += self.velocidad_y
         self.aura.y += self.velocidad_y
@@ -194,11 +198,44 @@ class Jugador:
             progreso = pygame.Rect(posicion[0], posicion[1], self.ataque_especial, alto_barra)
         pygame.draw.rect(pantalla, blanco, barra)
         pygame.draw.rect(pantalla, amarillos_ps, progreso)
+    
+    def disparar_proyectil(self):
+        direccion = 1 if self.rectan.x < pantalla_ancho // 2 else -1
+        velocidad = 5
+        posicion = self.rectan.midleft
+        proyectil = Proyectil(posicion, velocidad, direccion)
+        self.proyectiles.append(proyectil)
+
+    def actualizar_proyectiles(self):
+        for proyectil in self.proyectiles:
+            proyectil.actualizar()
+
+    def dibujar_proyectiles(self):
+        for proyectil in self.proyectiles:
+            proyectil.dibujar()
+
+class Proyectil:
+    def __init__(self, posicion, velocidad, direccion, sprites=None):
+        self.rect = pygame.Rect(posicion, (60, 10))
+        self.velocidad = velocidad
+        self.direccion = direccion
+        self.sprites = sprites
+        self.animacion_actual = "disparado"
+        self.animaciones = {
+            "disparado": cargar_sprites(pygame.image.load('assets/anims/samurai/proyectil_samurai.png').convert_alpha(), 3, 129.6, 50, fondo_samurai),
+        }
+        self.sprite_index = 0
+        self.image = self.animaciones[self.animacion_actual][self.sprite_index]
+        self.tiempo_ultimo_sprite = pygame.time.get_ticks()
+        self.tiempo_entre_sprites = 75  # Milisegundos entre cada frame de la animación
+
+    def actualizar(self):
+        self.rect.x += self.velocidad * self.direccion
 
     def dibujar(self):
-        imagen_actual = self.animaciones[self.estado][self.frame_actual]
-        pantalla.blit(imagen_actual, self.rectan.topleft)
-
+        imagen_actual = self.animaciones[self.animacion_actual][self.sprite_index]
+        pantalla.blit(imagen_actual, self.rect.topleft)
+        
 class Juego:
     def __init__(self):
         self.jugador1 = Jugador(amarillo, pygame.Rect(pantalla_ancho // 2 - 250, 500, 80, 130), pygame.Rect(pantalla_ancho // 2 - 270, 380, 70, 120))
@@ -208,10 +245,10 @@ class Juego:
         self.fondo = pygame.image.load("assets/images/img3.jpeg")
         self.fondo = pygame.transform.scale(self.fondo, (pantalla_ancho, pantalla_alto))
 
-    def comprobar_colisiones_y_ataques(self, teclas, ataque_j1, ataque_j2, ataque_especial_j1, ataque_especial_j2):
+    def comprobar_colisiones_y_ataques(self, teclas, ataque_j1, ataque_j2, ataque_especial_j1, ataque_especial_j2, proyectil_j1, proyectil_j2):
         tiempo_actual = pygame.time.get_ticks()
         if teclas[ataque_j1] and tiempo_actual > self.jugador1.cooldown:
-            if self.jugador1.aura.colliderect(self.jugador2.rectan) and teclas[ataque_j1] and tiempo_actual > self.jugador1.cooldown and not self.jugador1.defendiendo:
+            if self.jugador1.aura.colliderect(self.jugador2.aura) and teclas[ataque_j1] and tiempo_actual > self.jugador1.cooldown and not self.jugador1.defendiendo:
                 self.jugador1.incrementar_ataque_especial(50)
                 direccion_retroceso = (10, -5)
                 if self.jugador2.defendiendo:
@@ -219,13 +256,14 @@ class Juego:
                         print("Jugador 2 ha sido derrotado")
                         return True
                 else:
+                    #self.jugador2.animacion_actual = "hit"
                     if self.jugador2.bajar_salud(30, direccion_retroceso):
                         print("Jugador 2 ha sido derrotado")
                         return True
             self.jugador1.cooldown = tiempo_actual + 1000
 
         if teclas[ataque_j2] and tiempo_actual > self.jugador2.cooldown:
-            if self.jugador2.aura.colliderect(self.jugador1.rectan) and teclas[ataque_j2] and tiempo_actual > self.jugador2.cooldown and not self.jugador2.defendiendo:
+            if self.jugador2.aura.colliderect(self.jugador1.aura) and teclas[ataque_j2] and tiempo_actual > self.jugador2.cooldown and not self.jugador2.defendiendo:
                 self.jugador2.incrementar_ataque_especial(50)
                 direccion_retroceso = (-10, -5)
                 if self.jugador1.defendiendo:
@@ -233,6 +271,7 @@ class Juego:
                         print("Jugador 1 ha sido derrotado")
                         return True
                 else:
+                    #self.jugador1.animacion_actual = "hit"
                     if self.jugador1.bajar_salud(30, direccion_retroceso):
                         print("Jugador 1 ha sido derrotado")
                         return True
@@ -253,8 +292,32 @@ class Juego:
                 print("Jugador 1 ha sido derrotado")
                 return True
 
-        return False
+        # Comprobar ataques con proyectil
+        if teclas[proyectil_j1]:
+            self.jugador1.disparar_proyectil()
+        if teclas[proyectil_j2]:
+            self.jugador2.disparar_proyectil()
 
+        # Actualizar proyectiles y comprobar colisiones con jugadores
+        self.jugador1.actualizar_proyectiles()
+        self.jugador2.actualizar_proyectiles()
+
+        for proyectil in self.jugador1.proyectiles:
+            if proyectil.rect.colliderect(self.jugador2.rectan):
+                self.jugador1.proyectiles.remove(proyectil)
+                if self.jugador2.bajar_salud(20, (10, -5)):
+                    print("Jugador 2 ha sido derrotado")
+                    return True
+
+        for proyectil in self.jugador2.proyectiles:
+            if proyectil.rect.colliderect(self.jugador1.rectan):
+                self.jugador2.proyectiles.remove(proyectil)
+                if self.jugador1.bajar_salud(20, (-10, -10)):
+                    print("Jugador 1 ha sido derrotado")
+                    return True
+
+        return False
+    
     def dibujar_tiempo_restante(self, tiempo_restante):
         minutos = tiempo_restante // 60
         segundos = tiempo_restante % 60
@@ -286,10 +349,10 @@ class Juego:
                 self.jugador2.actualizar(teclas, pygame.K_LEFT, pygame.K_RIGHT, pygame.K_UP, pygame.K_DOWN, pygame.K_i, self.jugador1)
 
                 # Comprobar colisiones entre las auras y los jugadores, y ataques
-                if self.comprobar_colisiones_y_ataques(teclas, pygame.K_r, pygame.K_i, pygame.K_t, pygame.K_o):
+                if self.comprobar_colisiones_y_ataques(teclas, pygame.K_r, pygame.K_i, pygame.K_t, pygame.K_o, pygame.K_y, pygame.K_p):
                     self.ejecutando = False
                 
-                 # Dibujar la imagen de fondo
+                # Dibujar la imagen de fondo
                 pantalla.blit(self.fondo, (0, 0))
 
                 # Dibujar todo en la pantalla
@@ -308,6 +371,10 @@ class Juego:
                 # Dibujar la barra de ataque especial
                 self.jugador1.dibujar_ataque_especial((10, 50))
                 self.jugador2.dibujar_ataque_especial((pantalla_ancho - 10, 50), espejo=True)
+
+                # Dibujar proyectiles
+                self.jugador1.dibujar_proyectiles()
+                self.jugador2.dibujar_proyectiles()
 
                 # Calcular y dibujar el tiempo restante
                 tiempo_transcurrido = (pygame.time.get_ticks() - inicio_tiempo) // 1000
@@ -332,7 +399,14 @@ class Juego:
 juego = Juego()
 juego.ejecutar()
 
-## Falta agregar ataque a distancia, evento de muerte al caer de la plataforma, solucionar bug al pegarse a la plataforma por los costados,
-# falta contador inicial para iniciar el juego, falta pantalla final al ganar un jugador o quedar en empate o por tiempo, faltan agregar personajes distintos con
-# características diferentes, interfaz de inicio del juego, interfaz de pausa, interfaz de selección de personajes, añadir animaciones distintas para cada personaje,
-# agregar dos vidas para cada jugador, agregar mecánica de empuje al recibir daño y agregar efectos de sonifo y música de fondo.
+# Mecánicas:
+# Falta arreglar ataque a distancia; solucionar bug al pegarse a la plataforma por los costados; faltan agregar personajes distintos con características diferentes;
+# evento de muerte al caer de la plataforma; agregar dos vidas para cada jugador.
+# Animaciones:
+# Continuar añadiendo animaciones distintas para cada personaje; hacer para que las animaciones tengan su espejo; corregir las imágenes de las animaciones
+# cambiar animación de bloqueo de samurai; mejorar lógica de animaciones.
+# Interfaces:
+# Interfaz de selección de personajes; mejorar interfaz de inicio del juego; agregar interfaz de pausa; mejorar las barras de vida, contadores y fuentes
+# General:
+# Falta contador inicial para iniciar el juego; falta pantalla final al ganar un jugador; dividir las funcionalidades por archivos; agregar imagen a plataforma;
+# agregar efectos de sonido y música de fondo.

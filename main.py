@@ -59,6 +59,8 @@ class Jugador:
         self.cooldown = 0
         self.ataque_especial = 0
         self.defendiendo = False
+        self.retroceso_x = 0
+        self.retroceso_y = 0
 
         # Animaciones
         self.sprites = sprites
@@ -107,6 +109,16 @@ class Jugador:
         self.aura.y += self.velocidad_y
         self.velocidad_y += self.gravedad
 
+        # Aplicar retroceso
+        self.rectan.x += self.retroceso_x
+        self.rectan.y += self.retroceso_y
+        self.aura.x += self.retroceso_x
+        self.aura.y += self.retroceso_y
+
+        # Reducir el retroceso gradualmente
+        self.retroceso_x *= 0.9
+        self.retroceso_y *= 0.9
+
         # Colisión con la plataforma
         if self.rectan.colliderect(plataforma):
             self.rectan.bottom = plataforma.top
@@ -143,12 +155,15 @@ class Jugador:
                 self.sprite_index = 0
             self.image = self.animaciones[self.animacion_actual][self.sprite_index]
 
-
-    def bajar_salud(self, dano):
+    def bajar_salud(self, dano, direccion_retroceso):
         self.salud -= dano
         if self.salud <= 0:
             self.salud = 0
             return True
+        # Aplicar retroceso basado en la dirección del ataque
+        self.retroceso_x = direccion_retroceso[0]
+        self.retroceso_y = direccion_retroceso[1]
+        
         return False
 
     def incrementar_ataque_especial(self, incremento):
@@ -180,7 +195,6 @@ class Jugador:
         pygame.draw.rect(pantalla, blanco, barra)
         pygame.draw.rect(pantalla, amarillos_ps, progreso)
 
-
     def dibujar(self):
         imagen_actual = self.animaciones[self.estado][self.frame_actual]
         pantalla.blit(imagen_actual, self.rectan.topleft)
@@ -199,12 +213,13 @@ class Juego:
         if teclas[ataque_j1] and tiempo_actual > self.jugador1.cooldown:
             if self.jugador1.aura.colliderect(self.jugador2.rectan) and teclas[ataque_j1] and tiempo_actual > self.jugador1.cooldown and not self.jugador1.defendiendo:
                 self.jugador1.incrementar_ataque_especial(50)
+                direccion_retroceso = (10, -5)
                 if self.jugador2.defendiendo:
-                    if self.jugador2.bajar_salud(10):
+                    if self.jugador2.bajar_salud(10, direccion_retroceso):
                         print("Jugador 2 ha sido derrotado")
                         return True
                 else:
-                    if self.jugador2.bajar_salud(30):
+                    if self.jugador2.bajar_salud(30, direccion_retroceso):
                         print("Jugador 2 ha sido derrotado")
                         return True
             self.jugador1.cooldown = tiempo_actual + 1000
@@ -212,12 +227,13 @@ class Juego:
         if teclas[ataque_j2] and tiempo_actual > self.jugador2.cooldown:
             if self.jugador2.aura.colliderect(self.jugador1.rectan) and teclas[ataque_j2] and tiempo_actual > self.jugador2.cooldown and not self.jugador2.defendiendo:
                 self.jugador2.incrementar_ataque_especial(50)
+                direccion_retroceso = (-10, -5)
                 if self.jugador1.defendiendo:
-                    if self.jugador1.bajar_salud(10):
+                    if self.jugador1.bajar_salud(10, direccion_retroceso):
                         print("Jugador 1 ha sido derrotado")
                         return True
                 else:
-                    if self.jugador1.bajar_salud(30):
+                    if self.jugador1.bajar_salud(30, direccion_retroceso):
                         print("Jugador 1 ha sido derrotado")
                         return True
             self.jugador2.cooldown = tiempo_actual + 1000
@@ -225,13 +241,15 @@ class Juego:
         # Comprobar ataques especiales
         if teclas[ataque_especial_j1] and self.jugador1.ataque_especial == 200 and not self.jugador1.defendiendo:
             self.jugador1.ataque_especial = 0
-            if self.jugador2.bajar_salud(50):
+            direccion_retroceso = (20, -10)
+            if self.jugador2.bajar_salud(50, direccion_retroceso):
                 print("Jugador 2 ha sido derrotado")
                 return True
 
         if teclas[ataque_especial_j2] and self.jugador2.ataque_especial == 200 and not self.jugador2.defendiendo:
             self.jugador2.ataque_especial = 0
-            if self.jugador1.bajar_salud(50):
+            direccion_retroceso = (-20, -10)
+            if self.jugador1.bajar_salud(50, direccion_retroceso):
                 print("Jugador 1 ha sido derrotado")
                 return True
 
@@ -314,7 +332,14 @@ class Juego:
 juego = Juego()
 juego.ejecutar()
 
-## Falta agregar ataque a distancia, evento de muerte al caer de la plataforma, solucionar bug al pegarse a la plataforma por los costados,
-# falta contador inicial para iniciar el juego, falta pantalla final al ganar un jugador o quedar en empate o por tiempo, faltan agregar personajes distintos con
-# características diferentes, interfaz de inicio del juego, interfaz de pausa, interfaz de selección de personajes, añadir animaciones distintas para cada personaje,
-# agregar dos vidas para cada jugador, agregar mecánica de empuje al recibir daño y agregar efectos de sonifo y música de fondo.
+# Mecánicas:
+# Falta arreglar ataque a distancia;  solucionar bug al pegarse a la plataforma por los costados; faltan agregar personajes distintos con características diferentes;
+# evento de muerte al caer de la plataforma; agregar dos vidas para cada jugador.
+# Animaciones:
+# Continuar añadiendo animaciones distintas para cada personaje; hacer para que las animaciones tengan su espejo; corregir las imágenes de las animaciones
+# cambiar animación de bloqueo de samurai 
+# Interfaces:
+# Interfaz de selección de personajes; mejorar interfaz de inicio del juego; agregar interfaz de pausa; mejorar las barras de vida, contadores y fuentes
+# General:
+# Falta contador inicial para iniciar el juego; falta pantalla final al ganar un jugador; dividir las funcionalidades por archivos; agregar imagen a plataforma;
+# agregar efectos de sonido y música de fondo.
