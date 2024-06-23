@@ -5,9 +5,9 @@ import sys
 pygame.init()
 
 # Configuración de la pantalla
-ancho_pantalla = 1600
-alto_pantalla = 900
-pantalla = pygame.display.set_mode((ancho_pantalla, alto_pantalla))
+pantalla_ancho = 1700
+pantalla_alto = 1000
+pantalla = pygame.display.set_mode((pantalla_ancho, pantalla_alto))
 pygame.display.set_caption("Pelea de dioses")
 
 # Colores
@@ -26,7 +26,7 @@ def mostrar_menu():
     while True:
         pantalla.fill(celeste)
         titulo = fuente.render('Pelea de Dioses', True, blanco)
-        pantalla.blit(titulo, (ancho_pantalla // 2 - titulo.get_width() // 2, 100))
+        pantalla.blit(titulo, (pantalla_ancho // 2 - titulo.get_width() // 2, 100))
 
         for i, opcion in enumerate(opciones_menu):
             color_texto = blanco  # Color por defecto
@@ -34,7 +34,7 @@ def mostrar_menu():
                 color_texto = negro  # Resaltar en negro si es la opción actual
 
             texto = fuente.render(opcion, True, color_texto)
-            pantalla.blit(texto, (ancho_pantalla // 2 - texto.get_width() // 2, 250 + i * 50))
+            pantalla.blit(texto, (pantalla_ancho // 2 - texto.get_width() // 2, 250 + i * 50))
 
         pygame.display.update()
 
