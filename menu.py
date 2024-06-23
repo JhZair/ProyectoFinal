@@ -20,7 +20,7 @@ fuente = pygame.font.Font(None, 50)
 
 # Función para mostrar el menú
 def mostrar_menu():
-    opciones_menu = ['Jugar', 'Opciones', 'Salir']
+    opciones_menu = ['Jugar', 'Salir']
     opcion_actual = 0
 
     while True:
