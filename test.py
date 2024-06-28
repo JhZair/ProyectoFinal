@@ -46,8 +46,7 @@ def cargar_sprites(hoja, num_sprites, ancho_sprite, alto_sprite, color):
     return sprites
 
 class Jugador:
-    def __init__(self, color, rectan, aura, velocidad=2, fuerza_salto=7.5, gravedad=0.3, sprites=None):
-        self.color = color
+    def __init__(self, rectan, aura, velocidad=2, fuerza_salto=7.5, gravedad=0.3, sprites=None):
         self.rectan = rectan
         self.aura = aura
         self.velocidad = velocidad
@@ -105,7 +104,7 @@ class Jugador:
             if otro_jugador.aura.colliderect(self.aura):
                 otro_jugador.animacion_actual = "hit"
         
-        if self.cooldown < tiempo and not (teclas[izq] or teclas[derecha] or teclas[salto]) and otro_jugador.animacion_actual != 'attack':
+        if self.cooldown < tiempo and not (teclas[izq] or teclas[derecha] or teclas[salto]) and otro_jugador.animacion_actual != 'attack' and self.en_plataforma:
             self.animacion_actual = "idle"
 
         #Aplicar gravedad
@@ -123,21 +122,36 @@ class Jugador:
         self.retroceso_x *= 0.9
         self.retroceso_y *= 0.9
 
-        # Colisión con la plataforma
+         # Colisión con la plataforma
         if self.rectan.colliderect(plataforma):
-            self.rectan.bottom = plataforma.top
-            self.aura.bottom = plataforma.top
-            self.velocidad_y = 0
-            self.en_plataforma = True
-
+            # Detectar desde qué lado colisiona el jugador con la plataforma
+            if self.rectan.bottom > plataforma.top and self.rectan.top < plataforma.top and self.velocidad_y > 0:
+                # Colisión desde arriba
+                self.rectan.bottom = plataforma.top
+                self.aura.bottom = plataforma.top
+                self.velocidad_y = 0
+                self.en_plataforma = True
+            # elif self.rectan.top < plataforma.bottom and self.rectan.bottom > plataforma.bottom and self.velocidad_y < 0:
+            #     # Colisión desde abajo
+            #     self.rectan.top = plataforma.bottom
+            #     self.aura.top = plataforma.bottom
+            #     self.velocidad_y = 0
+            if self.rectan.left > plataforma.left and self.rectan.left < plataforma.left:
+                # Colisión desde la izquierda
+                self.rectan.right = plataforma.left
+                self.aura.right = plataforma.left
+            if self.rectan.right < plataforma.right and self.rectan.right > plataforma.right:
+                # Colisión desde la derecha
+                self.rectan.left = plataforma.right
+                self.aura.left = plataforma.right
         # Colisión con el otro jugador
-        if self.rectan.colliderect(otro_jugador.rectan):
-            if teclas[izq]:
-                self.rectan.x = otro_jugador.rectan.right
-                self.aura.x = otro_jugador.rectan.right - 20
-            if teclas[derecha]:
-                self.rectan.x = otro_jugador.rectan.left - self.rectan.width
-                self.aura.x = otro_jugador.rectan.left - self.aura.width + 20
+        # if self.rectan.colliderect(otro_jugador.rectan):
+        #     if teclas[izq]:
+        #         self.rectan.x = otro_jugador.rectan.right
+        #         self.aura.x = otro_jugador.rectan.right - 20
+        #     if teclas[derecha]:
+        #         self.rectan.x = otro_jugador.rectan.left - self.rectan.width
+        #         self.aura.x = otro_jugador.rectan.left - self.aura.width + 20
 
         # Actualizar estado de defensa y velocidad de movimiento
         self.defendiendo = teclas[defensa]
@@ -238,8 +252,8 @@ class Proyectil:
         
 class Juego:
     def __init__(self):
-        self.jugador1 = Jugador(amarillo, pygame.Rect(pantalla_ancho // 2 - 250, 500, 80, 130), pygame.Rect(pantalla_ancho // 2 - 270, 380, 70, 120))
-        self.jugador2 = Jugador(naranja, pygame.Rect(pantalla_ancho // 2 + 220, 500, 80, 130), pygame.Rect(pantalla_ancho // 2 + 200, 380, 70, 120))
+        self.jugador1 = Jugador(pygame.Rect(pantalla_ancho // 2 - 250, 500, 80, 130), pygame.Rect(pantalla_ancho // 2 - 270, 380, 70, 120))
+        self.jugador2 = Jugador(pygame.Rect(pantalla_ancho // 2 + 220, 500, 80, 130), pygame.Rect(pantalla_ancho // 2 + 200, 380, 70, 120))
         self.ejecutando = True
         # Cargar la imagen de fondo
         self.fondo = pygame.image.load("assets/images/img3.jpeg")
@@ -256,11 +270,10 @@ class Juego:
                         print("Jugador 2 ha sido derrotado")
                         return True
                 else:
-                    #self.jugador2.animacion_actual = "hit"
                     if self.jugador2.bajar_salud(30, direccion_retroceso):
                         print("Jugador 2 ha sido derrotado")
                         return True
-            self.jugador1.cooldown = tiempo_actual + 1000
+            self.jugador1.cooldown = tiempo_actual + 700
 
         if teclas[ataque_j2] and tiempo_actual > self.jugador2.cooldown:
             if self.jugador2.aura.colliderect(self.jugador1.aura) and teclas[ataque_j2] and tiempo_actual > self.jugador2.cooldown and not self.jugador2.defendiendo:
@@ -271,11 +284,10 @@ class Juego:
                         print("Jugador 1 ha sido derrotado")
                         return True
                 else:
-                    #self.jugador1.animacion_actual = "hit"
                     if self.jugador1.bajar_salud(30, direccion_retroceso):
                         print("Jugador 1 ha sido derrotado")
                         return True
-            self.jugador2.cooldown = tiempo_actual + 1000
+            self.jugador2.cooldown = tiempo_actual + 700
 
         # Comprobar ataques especiales
         if teclas[ataque_especial_j1] and self.jugador1.ataque_especial == 200 and not self.jugador1.defendiendo:
@@ -293,10 +305,12 @@ class Juego:
                 return True
 
         # Comprobar ataques con proyectil
-        if teclas[proyectil_j1]:
+        if teclas[proyectil_j1] and self.jugador1.cooldown < tiempo_actual:
             self.jugador1.disparar_proyectil()
-        if teclas[proyectil_j2]:
+            self.jugador1.cooldown = tiempo_actual + 4000 
+        if teclas[proyectil_j2] and self.jugador2.cooldown < tiempo_actual:
             self.jugador2.disparar_proyectil()
+            self.jugador2.cooldown = tiempo_actual + 4000
 
         # Actualizar proyectiles y comprobar colisiones con jugadores
         self.jugador1.actualizar_proyectiles()
