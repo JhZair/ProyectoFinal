@@ -1,5 +1,7 @@
 import pygame
 import sys
+
+import pygame.locals
 from menu import mostrar_menu
 
 # Inicializar Pygame
@@ -15,16 +17,13 @@ pygame.display.set_caption("God's Fight")
 blanco = (255, 255, 255)
 negro = (0, 0, 0)
 gris = (117, 117, 117)
-amarillo = (255, 233, 0)
+amarillo_vd = (255, 233, 0)
 naranja = (255, 165, 0)
-celeste = (0, 170, 228)
-verde_transparente = (0, 255, 0, 128)
+verde_aura = (0, 255, 0, 128)
 verde_vd = (1, 233, 12)
-amarillos_ps = (255, 243, 78)
+azul_ats = (42, 144, 255)
 fondo_samurai = (192, 192, 192)
 fondo_anubis = (84,165,75)
-fondo_anubis2 = (58,111,51)
-fondo_anubis3 = (27,89,153)
 
 # Configuración del reloj
 reloj = pygame.time.Clock()
@@ -61,7 +60,10 @@ class Jugador:
         self.gravedad = 0.3
         self.velocidad_y = 0
         self.en_plataforma = False
-        self.salud = 500
+        self.salud = 700
+        self.max_salud = 700
+        self.vidas = 2
+        self.reapareciendo = False
         self.cooldown = 0
         self.ataque_especial = 0
         self.defendiendo = False
@@ -118,7 +120,10 @@ class Jugador:
         else:
             self.velocidad = self.velocidad_inicial
         
-        if self.cooldown < tiempo and not (teclas[izq] or teclas[derecha] or teclas[salto]) and otro_jugador.animacion_actual != 'attack' and self.en_plataforma:
+        if self.reapareciendo:
+            self.animacion_actual = "death"
+
+        if self.cooldown < tiempo and not (teclas[izq] or teclas[derecha] or teclas[salto] or teclas[defensa]) and otro_jugador.animacion_actual != 'attack' and self.en_plataforma:
             self.animacion_actual = "idle"
 
         #Aplicar gravedad
@@ -143,6 +148,7 @@ class Jugador:
                 self.aura.bottom = plataforma.top
                 self.velocidad_y = 0
                 self.en_plataforma = True
+                self.reapareciendo = False
             else:
                 self.en_plataforma = False
 
@@ -152,13 +158,25 @@ class Jugador:
     def bajar_salud(self, dano, direccion_retroceso):
         self.salud -= dano
         if self.salud <= 0:
-            self.salud = 0
-            return True
+            if self.vidas == 2:
+                self.perder_vida()
+            else:
+                self.salud = 0
+                return True
         # Aplicar retroceso basado en la dirección del ataque
         self.retroceso_x = direccion_retroceso[0]
         self.retroceso_y = direccion_retroceso[1]
-        
         return False
+    
+    def perder_vida(self):
+        self.vidas -= 1
+        if self.vidas > 0:
+            self.salud = self.max_salud
+            self.reapareciendo = True
+            self.rectan.y = -self.rectan.height
+            self.aura.y = -self.aura.height
+            self.rectan.x = pantalla_ancho // 2 - self.rectan.width * 0.2
+            self.aura.x = pantalla_ancho // 2 - self.aura.width * 0.2
 
     def incrementar_ataque_especial(self, incremento):
         self.ataque_especial += incremento
@@ -166,16 +184,26 @@ class Jugador:
             self.ataque_especial = 200
 
     def dibujar_barra_salud(self, posicion, espejo=False):
-        ancho_barra = 500
+        ancho_barra = self.max_salud
         alto_barra = 30
-        if espejo:
-            barra = pygame.Rect(posicion[0] - ancho_barra, posicion[1], ancho_barra, alto_barra)
-            progreso = pygame.Rect(posicion[0] - self.salud, posicion[1], self.salud, alto_barra)
-        else:
-            barra = pygame.Rect(posicion[0], posicion[1], ancho_barra, alto_barra)
-            progreso = pygame.Rect(posicion[0], posicion[1], self.salud, alto_barra)
-        pygame.draw.rect(pantalla, blanco, barra)
-        pygame.draw.rect(pantalla, verde_vd, progreso)
+        if self.vidas == 2:
+            if espejo:
+                barra = pygame.Rect(posicion[0] - ancho_barra, posicion[1], ancho_barra, alto_barra)
+                progreso_primera_vida = pygame.Rect(posicion[0] - self.salud, posicion[1], self.salud, alto_barra)
+            else:
+                barra = pygame.Rect(posicion[0], posicion[1], ancho_barra, alto_barra)
+                progreso_primera_vida = pygame.Rect(posicion[0], posicion[1], self.salud, alto_barra)
+            pygame.draw.rect(pantalla, verde_vd, barra)  # Dibujar el contorno de la barra
+            pygame.draw.rect(pantalla, amarillo_vd, progreso_primera_vida)  # Barra amarilla para la primera vida
+        elif self.vidas == 1:
+            if espejo:
+                barra = pygame.Rect(posicion[0] - ancho_barra, posicion[1], ancho_barra, alto_barra)
+                progreso = pygame.Rect(posicion[0] - self.salud, posicion[1], self.salud, alto_barra)
+            else:
+                barra = pygame.Rect(posicion[0], posicion[1], ancho_barra, alto_barra)
+                progreso = pygame.Rect(posicion[0], posicion[1], self.salud, alto_barra)
+            pygame.draw.rect(pantalla, blanco, barra)  # Dibujar el contorno de la barra
+            pygame.draw.rect(pantalla, verde_vd, progreso)  # Barra roja para la vida restante
 
     def dibujar_ataque_especial(self, posicion, espejo=False):
         ancho_barra = 200
@@ -187,7 +215,7 @@ class Jugador:
             barra = pygame.Rect(posicion[0], posicion[1], ancho_barra, alto_barra)
             progreso = pygame.Rect(posicion[0], posicion[1], self.ataque_especial, alto_barra)
         pygame.draw.rect(pantalla, blanco, barra)
-        pygame.draw.rect(pantalla, amarillos_ps, progreso)
+        pygame.draw.rect(pantalla, azul_ats, progreso)
     
     def disparar_proyectil(self, otro_jugador):
         direccion = 1 if self.rectan.x < otro_jugador.rectan.x else -1
@@ -218,12 +246,13 @@ class Samurai(Jugador):
             "attack": cargar_sprites(pygame.image.load('assets/anims/samurai/ataque_samurai.png').convert_alpha(), 5, 140, 140, fondo_samurai),
             "defense": cargar_sprites(pygame.image.load('assets/anims/samurai/bloqueo_samurai.png').convert_alpha(), 2, 100, 140, fondo_samurai),
             'hit': cargar_sprites(pygame.image.load('assets/anims/samurai/dañado_samurai.png').convert_alpha(), 5, 121.6, 140, fondo_samurai),
-            'shoot': cargar_sprites(pygame.image.load('assets/anims/samurai/disparo_samurai.png').convert_alpha(), 7, 195, 140, fondo_samurai)
+            'shoot': cargar_sprites(pygame.image.load('assets/anims/samurai/disparo_samurai.png').convert_alpha(), 7, 195, 140, fondo_samurai),
+            'death': cargar_sprites(pygame.image.load('assets/anims/samurai/intro_samurai.png').convert_alpha(), 6, 150.5, 140, fondo_samurai)
         }
         self.sprite_index = 0
         self.image = self.animaciones[self.animacion_actual][self.sprite_index]
         self.tiempo_ultimo_sprite = pygame.time.get_ticks()
-        self.tiempo_entre_sprites = 75  # Milisegundos entre cada frame de la animación
+        self.tiempo_entre_sprites = 80  # Milisegundos entre cada frame de la animación
 
 class Anubis(Jugador):
     def __init__(self, rectan, aura):
@@ -238,12 +267,13 @@ class Anubis(Jugador):
             "attack": cargar_sprites(pygame.image.load('assets/anims/anubis/ataque_anubis.png').convert_alpha(), 8, 131.375, 98, fondo_anubis),
             "defense": cargar_sprites(pygame.image.load('assets/anims/anubis/bloqueo_anubis.png').convert_alpha(), 10, 129, 98, fondo_anubis),
             'hit': cargar_sprites(pygame.image.load('assets/anims/anubis/caminata_anubis.png').convert_alpha(), 8, 129, 98, fondo_anubis),
-            'shoot': cargar_sprites(pygame.image.load('assets/anims/anubis/caminata_anubis.png').convert_alpha(), 8, 129, 98, fondo_anubis)
+            'shoot': cargar_sprites(pygame.image.load('assets/anims/anubis/caminata_anubis.png').convert_alpha(), 8, 129, 98, fondo_anubis),
+            'death': cargar_sprites(pygame.image.load('assets/anims/anubis/intro_anubis.png').convert_alpha(), 9, 128.8, 98, fondo_anubis)
         }
         self.sprite_index = 0
         self.image = self.animaciones[self.animacion_actual][self.sprite_index]
         self.tiempo_ultimo_sprite = pygame.time.get_ticks()
-        self.tiempo_entre_sprites = 75  # Milisegundos entre cada frame de la animación
+        self.tiempo_entre_sprites = 60  # Milisegundos entre cada frame de la animación
 
 class Proyectil:
     def __init__(self, posicion, velocidad, direccion, sprites=None):
@@ -273,7 +303,7 @@ class Juego:
         self.jugador2 = Anubis(pygame.Rect(pantalla_ancho // 2 + 240, 200, 80, 130), pygame.Rect(pantalla_ancho // 2 + 240, 200, 115, 130))
         self.ejecutando = True
         # Cargar la imagen de fondo
-        self.fondo = pygame.image.load("assets/images/img2.jpeg")
+        self.fondo = pygame.image.load("assets/images/img1.jpeg")
         self.fondo = pygame.transform.scale(self.fondo, (pantalla_ancho, pantalla_alto))
 
     def comprobar_colisiones_y_ataques(self, teclas, ataque_j1, ataque_j2, ataque_especial_j1, ataque_especial_j2, proyectil_j1, proyectil_j2):
@@ -390,7 +420,6 @@ class Juego:
                 pantalla.blit(self.jugador1.image, self.jugador1.rectan.topleft)
                 pantalla.blit(self.jugador2.image, self.jugador2.rectan.topleft)
                 pantalla.blit(imagen_plataforma, plataforma)
-                #pygame.draw.rect(pantalla, gris, plataforma)
 
                 # Dibujar las auras para visualización (opcional)
                 # pygame.draw.rect(pantalla, verde_transparente, self.jugador1.aura)
@@ -432,11 +461,12 @@ juego = Juego()
 juego.ejecutar()
 
 # Mecánicas:
-# Agregar algo que diferencie a anubis y samurai; evento de muerte al caer de la plataforma; agregar dos vidas para cada jugador.
+# Agregar algo que diferencie a anubis y samurai; evento de muerte al caer de la plataforma; agregar direcciones a cada personaje.
 # Animaciones:
-# terminar de añadir animaciones para Anubis; hacer que las animaciones tengan su espejo; corregir los colores de imágenes anubis; mejorar animación de bloqueo de samurai; reescalar imágenes Anubis.
+# terminar de añadir animaciones para Anubis; hacer que las animaciones tengan su espejo; corregir los colores de imágenes anubis; mejorar animación de bloqueo de samurai; 
+# reescalar imágenes Anubis; segun que dirección tenga los pjs es animación en espejo o no; animaciones en reversa para caminar.
 # Interfaces:
 # Interfaz de selección de personajes; mejorar interfaz de inicio del juego; agregar interfaz de pausa; mejorar las barras de vida, contadores y fuentes
 # General:
-# Falta contador inicial para iniciar el juego; falta pantalla final al ganar un jugador; dividir las funcionalidades por archivos; agregar imagen a plataforma;
-# agregar efectos de sonido y música de fondo; buscar imágenes para plataforma.
+# Falta contador inicial para iniciar el juego; falta pantalla final al ganar un jugador; dividir las funcionalidades por archivos;
+# agregar efectos de sonido y música de fondo; mejorar imagen de plataforma.
