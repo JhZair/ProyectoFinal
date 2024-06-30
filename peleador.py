@@ -1,7 +1,7 @@
 import pygame
 from sprites import cargar_sprites
 from menu import pantalla
-from arena import plataforma  
+from arena import plataforma_redondeada  
 
 blanco = (255, 255, 255)
 verde_vd = (1, 233, 12)
@@ -72,9 +72,9 @@ class Jugador:
         self.velocidad_y += self.gravedad
 
         # Colisión con la plataforma
-        if self.rectan.colliderect(plataforma):
-            self.rectan.bottom = plataforma.top
-            self.aura.bottom = plataforma.top
+        if self.rectan.colliderect(plataforma_redondeada):
+            self.rectan.bottom = plataforma_redondeada.top
+            self.aura.bottom = plataforma_redondeada.top
             self.velocidad_y = 0
             self.en_plataforma = True
 

@@ -1,15 +1,14 @@
 import pygame
 import sys
-
+from config import *
 import pygame.locals
 from menu import mostrar_menu
+from arena import plataforma, imagen_plataforma
 
 # Inicializar Pygame
 pygame.init()
 
 # Configuración de la pantalla
-pantalla_ancho = 1700
-pantalla_alto = 1000
 pantalla = pygame.display.set_mode((pantalla_ancho, pantalla_alto))
 pygame.display.set_caption("God's Fight")
 
@@ -37,12 +36,6 @@ fuente = pygame.font.Font(None, 74)
 # Duración de la partida en segundos
 duracion_partida = 120
 inicio_tiempo = pygame.time.get_ticks()
-
-# Plataforma
-imagen_plataforma = pygame.image.load('assets/images/plataforma2.jpg').convert_alpha()
-plataforma = pygame.Rect(200, 550, pantalla_ancho - 400, 500)
-imagen_plataforma = pygame.transform.scale(imagen_plataforma, (plataforma.width, plataforma.height))
-
 
 def cargar_sprites(hoja, num_sprites, ancho_sprite, alto_sprite, color):
     sprites = []
@@ -270,7 +263,7 @@ class Samurai(Jugador):
         self.indice_sprite = 0
         self.imagen = self.animaciones[self.animacion_actual][self.indice_sprite]
         self.tiempo_ultimo_sprite = pygame.time.get_ticks()
-        self.tiempo_entre_sprites = 80  # Milisegundos entre cada frame de la animación
+        self.tiempo_entre_sprites = 100  # Milisegundos entre cada frame de la animación
     
     def manejar_saltos(self, teclas, salto):
         tiempo_actual = pygame.time.get_ticks()
@@ -295,19 +288,19 @@ class Hanzo(Jugador):
         self.animacion_actual = "idle"
         self.animaciones = {
             "idle": [pintar_superficie(sprite, color_tinte2) for sprite in cargar_sprites(pygame.image.load('assets/anims/hanzo/Idle_Hanzo.png').convert_alpha(), 10, 100, 118, fondo)],
-            "run": [pintar_superficie(sprite, color_tinte2) for sprite in cargar_sprites(pygame.image.load('assets/anims/anubis/caminata_anubis.png').convert_alpha(), 8, 129, 98, fondo)],
-            "run_b": [pintar_superficie(sprite, color_tinte2) for sprite in cargar_sprites(pygame.image.load('assets/anims/anubis/caminata_anubis.png').convert_alpha(), 8, 129, 98, fondo)],
-            "jump": [pintar_superficie(sprite, color_tinte2) for sprite in cargar_sprites(pygame.image.load('assets/anims/anubis/salto_anubis.png').convert_alpha(), 8, 128.75, 98, fondo)],
-            "attack": [pintar_superficie(sprite, color_tinte2) for sprite in cargar_sprites(pygame.image.load('assets/anims/anubis/ataque_anubis.png').convert_alpha(), 8, 131.375, 98, fondo)],
-            "defense": [pintar_superficie(sprite, color_tinte2) for sprite in cargar_sprites(pygame.image.load('assets/anims/anubis/bloqueo_anubis.png').convert_alpha(), 10, 129, 98, fondo)],
-            'hit': [pintar_superficie(sprite, color_tinte2) for sprite in cargar_sprites(pygame.image.load('assets/anims/anubis/caminata_anubis.png').convert_alpha(), 8, 129, 98, fondo)],
-            'shoot': [pintar_superficie(sprite, color_tinte2) for sprite in cargar_sprites(pygame.image.load('assets/anims/anubis/caminata_anubis.png').convert_alpha(), 8, 129, 98, fondo)],
-            'death': [pintar_superficie(sprite, color_tinte2) for sprite in cargar_sprites(pygame.image.load('assets/anims/anubis/intro_anubis.png').convert_alpha(), 9, 128.8, 98, fondo)]
+            "run": [pintar_superficie(sprite, color_tinte2) for sprite in cargar_sprites(pygame.image.load('assets/anims/hanzo/caminata_Hanzo.png').convert_alpha(), 10, 110, 120, fondo)],
+            "run_b": [pintar_superficie(sprite, color_tinte2) for sprite in cargar_sprites(pygame.image.load('assets/anims/hanzo/caminataparaatras_Hanzo.png').convert_alpha(), 10, 100, 130, fondo)],
+            "jump": [pintar_superficie(sprite, color_tinte2) for sprite in cargar_sprites(pygame.image.load('assets/anims/hanzo/salto_Hanzo.png').convert_alpha(), 6, 80, 150, fondo)],
+            "attack": [pintar_superficie(sprite, color_tinte2) for sprite in cargar_sprites(pygame.image.load('assets/anims/hanzo/ataque_Hanzo.png').convert_alpha(), 6, 140, 120, fondo)],
+            "defense": [pintar_superficie(sprite, color_tinte2) for sprite in cargar_sprites(pygame.image.load('assets/anims/hanzo/bloqueo_Hanzo.png').convert_alpha(), 2, 110, 120, fondo)],
+            'hit': [pintar_superficie(sprite, color_tinte2) for sprite in cargar_sprites(pygame.image.load('assets/anims/hanzo/daño_Hanzo.png').convert_alpha(), 2, 100, 110, fondo)],
+            'shoot': [pintar_superficie(sprite, color_tinte2) for sprite in cargar_sprites(pygame.image.load('assets/anims/hanzo/ataquep_Hanzo.png').convert_alpha(), 5, 155, 120, fondo)],
+            'death': [pintar_superficie(sprite, color_tinte2) for sprite in cargar_sprites(pygame.image.load('assets/anims/hanzo/muerte_Hanzo.png').convert_alpha(), 9, 130, 110, fondo)]
         }
         self.indice_sprite = 0
         self.imagen = self.animaciones[self.animacion_actual][self.indice_sprite]
         self.tiempo_ultimo_sprite = pygame.time.get_ticks()
-        self.tiempo_entre_sprites = 80  # Milisegundos entre cada frame de la animación
+        self.tiempo_entre_sprites = 100  # Milisegundos entre cada frame de la animación
 
     def disparar_proyectil(self, otro_jugador):
         direccion = 1 if self.rectan.x < otro_jugador.rectan.x else -1
@@ -325,7 +318,7 @@ class Proyectil:
         self.sprites = sprites
         self.animacion_actual = "disparo"
         self.animaciones = {
-            "disparo": [pintar_superficie(sprite, color_tinte_proyectil) for sprite in cargar_sprites(pygame.image.load('assets/anims/samurai/proyectil_samurai.png').convert_alpha(), 3, 132, 30, fondo_samurai)],
+            "disparo": [pintar_superficie(sprite, color_tinte_proyectil) for sprite in cargar_sprites(pygame.image.load('assets/anims/hanzo/proyectil_Hanzo.png').convert_alpha(), 1, 60, 30, fondo)],
         }
         self.sprite_index = 0
         self.image = self.animaciones[self.animacion_actual][self.sprite_index]
@@ -341,8 +334,8 @@ class Proyectil:
         
 class Juego:
     def __init__(self):
-        self.jugador1 = Samurai(pygame.Rect(pantalla_ancho // 2 - 240, 200, 80, 130), pygame.Rect(pantalla_ancho // 2 - 240, 200, 115, 130))
-        self.jugador2 = Hanzo(pygame.Rect(pantalla_ancho // 2 + 240, 200, 80, 115), pygame.Rect(pantalla_ancho // 2 + 240, 200, 115, 130))
+        self.jugador1 = Samurai(pygame.Rect(pantalla_ancho // 2 - 240, 550, 80, 130), pygame.Rect(pantalla_ancho // 2 - 240, 200, 115, 130))
+        self.jugador2 = Hanzo(pygame.Rect(pantalla_ancho // 2 + 240, 550, 80, 115), pygame.Rect(pantalla_ancho // 2 + 240, 200, 115, 130))
         self.ejecutando = True
         # Cargar la imagen de fondo
         self.fondo = pygame.image.load("assets/images/img1.jpeg")
@@ -377,6 +370,21 @@ class Juego:
                         print("Jugador 1 ha sido derrotado")
                         return True
             self.jugador2.cooldown = tiempo_actual + self.jugador2.cooldown_inicial
+
+        # Verificar si el jugador cae fuera de la pantalla
+        if self.jugador1.rectan.top > pantalla_alto:
+            if self.jugador1.vidas == 2:
+                self.jugador1.perder_vida()
+            else:
+                print("Jugador 1 ha sido derrotado")
+                return True
+            
+        if self.jugador2.rectan.top > pantalla_alto:
+            if self.jugador2.vidas == 2:
+                self.jugador2.perder_vida()
+            else:
+                print("Jugador 2 ha sido derrotado")
+                return True
 
         # Comprobar ataques especiales
         if teclas[ataque_especial_j1] and self.jugador1.ataque_especial == 200 and not self.jugador1.defendiendo and self.jugador1.aura.colliderect(self.jugador2.rectan):
@@ -503,12 +511,13 @@ juego = Juego()
 juego.ejecutar()
 
 # Mecánicas:
-# Agregar algo que diferencie a Hanzo de samurai; evento de muerte al caer de la plataforma; agregar direcciones a cada personaje; ver como hacer bordes redondeados de plataforma
+# agregar direcciones a cada personaje,
 # Animaciones:
 # terminar de añadir animaciones para Hanzo; hacer que las animaciones tengan su espejo; mejorar animación de bloqueo de samurai; 
 # segun que dirección tenga es pj es una animación en espejo o no; añadir animación de ataque especial samurai
 # Interfaces:
-# Interfaz de selección de personajes; mejorar interfaz de inicio del juego; agregar interfaz de pausa; mejorar las barras de vida, contadores y fuentes
+# Interfaz de selección de personajes; mejorar interfaz de inicio del juego; agregar interfaz de pausa; mejorar las barras de vida, contadores y fuentes;
+# agregar pantall de muerte al caer de la plataforma.
 # General:
 # Falta contador inicial para iniciar el juego; falta pantalla final al ganar un jugador; dividir las funcionalidades por archivos;
 # agregar efectos de sonido y música de fondo; mejorar imagen de plataforma.
