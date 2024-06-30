@@ -53,7 +53,7 @@ def cargar_sprites(hoja, num_sprites, ancho_sprite, alto_sprite, color):
 
     return sprites
 
-def tint_surface(surface, color):
+def pintar_superficie(surface, color):
     tinted_surface = surface.copy()
     tinted_surface.fill((0, 0, 0, 255), None, pygame.BLEND_RGBA_MULT)
     tinted_surface.fill(color[0:3] + (0,), None, pygame.BLEND_RGBA_ADD)
@@ -70,7 +70,7 @@ class Jugador:
         self.velocidad_y = 0
         self.en_plataforma = False
         self.max_salud = 700
-        self.salud = 700
+        self.salud = self.max_salud
         self.vidas = 2
         self.reapareciendo = False
         self.cooldown_inicial = cooldown_inicial
@@ -80,15 +80,16 @@ class Jugador:
         self.retroceso_x = 0
         self.retroceso_y = 0
         self.proyectiles = []
+        self.doble_salto = False
 
     def actualizar_animacion(self):
         ahora = pygame.time.get_ticks()
         if ahora - self.tiempo_ultimo_sprite > self.tiempo_entre_sprites:
             self.tiempo_ultimo_sprite = ahora
-            self.sprite_index += 1
-            if self.sprite_index >= len(self.animaciones[self.animacion_actual]):
-                self.sprite_index = 0
-            self.image = self.animaciones[self.animacion_actual][self.sprite_index]
+            self.indice_sprite += 1
+            if self.indice_sprite >= len(self.animaciones[self.animacion_actual]):
+                self.indice_sprite = 0
+            self.imagen = self.animaciones[self.animacion_actual][self.indice_sprite]
 
     def actualizar(self, teclas, izq, derecha, salto, defensa, ataque, ataque_f, otro_jugador):
         tiempo = pygame.time.get_ticks()
@@ -110,15 +111,9 @@ class Jugador:
                 self.rectan.right = plataforma.left
                 self.aura.right = plataforma.left
 
-        if teclas[salto]:
-            if self.en_plataforma:
-                self.velocidad_y = -self.fuerza_salto
-                self.en_plataforma = False
-                self.double_jump = True  # Permite el doble salto
-            elif self.double_jump:
-                self.velocidad_y = -self.fuerza_salto
-                self.double_jump = False  # El doble salto se ha usado
-        
+        # Manejar los saltos (implementado en las subclases)
+        self.manejar_saltos(teclas, salto)
+
         if not self.en_plataforma and otro_jugador.animacion_actual != 'attack':
             self.animacion_actual = "jump"
         
@@ -126,7 +121,7 @@ class Jugador:
             self.animacion_actual = "attack"
             if otro_jugador.rectan.colliderect(self.rectan):
                 otro_jugador.animacion_actual = "hit"
-        
+
         self.defendiendo = teclas[defensa]
         if self.defendiendo:
             self.velocidad = self.velocidad_inicial * 0.2
@@ -140,12 +135,13 @@ class Jugador:
         if self.cooldown < tiempo and not (teclas[izq] or teclas[derecha] or teclas[salto] or teclas[defensa]) and otro_jugador.animacion_actual != 'attack' and self.en_plataforma:
             self.animacion_actual = "idle"
 
-        #Aplicar gravedad
+        # Aplicar gravedad
         self.rectan.y += self.velocidad_y
         self.aura.y += self.velocidad_y
         self.velocidad_y += self.gravedad
         if self.velocidad_y > 2:
             self.en_plataforma = False
+
         # Aplicar retroceso
         self.rectan.x += self.retroceso_x
         self.rectan.y += self.retroceso_y
@@ -155,7 +151,8 @@ class Jugador:
         # Reducir el retroceso gradualmente
         self.retroceso_x *= 0.9
         self.retroceso_y *= 0.9
-         # Colisión con la plataforma
+
+        # Colisión con la plataforma
         if self.rectan.colliderect(plataforma):
             if self.velocidad_y > 0:  # Sólo ajustar si el jugador está cayendo
                 self.rectan.bottom = plataforma.top
@@ -163,12 +160,16 @@ class Jugador:
                 self.velocidad_y = 0
                 self.en_plataforma = True
                 self.reapareciendo = False
-                self.double_jump = False
             else:
                 self.en_plataforma = False
 
         # Actualizar animación
         self.actualizar_animacion()
+    
+    def manejar_saltos(self, teclas, salto):
+        if teclas[salto] and self.en_plataforma:
+            self.velocidad_y = -self.fuerza_salto
+            self.en_plataforma = False
 
     def bajar_salud(self, dano, direccion_retroceso):
         self.salud -= dano
@@ -250,48 +251,71 @@ class Jugador:
 # Definición de las subclases
 class Samurai(Jugador):
     def __init__(self, rectan, aura):
-        super().__init__(rectan, aura, velocidad=4.5, fuerza_salto=7.5)
-        self.double_jump = False
-        # Animaciones
+        super().__init__(rectan, aura, velocidad=4.5, fuerza_salto=7)
+        self.saltos_maximos = 2
+        self.dobles_saltos_restantes = self.saltos_maximos
+        self.tiempo_ultimo_salto = 0
         self.animacion_actual = "idle"
         self.animaciones = {
-            "idle": [tint_surface(sprite, color_tinte1) for sprite in cargar_sprites(pygame.image.load('assets/anims/samurai/idle_samurai.png').convert_alpha(), 10, 107.6, 140, fondo_samurai)],
-            "run": [tint_surface(sprite, color_tinte1) for sprite in cargar_sprites(pygame.image.load('assets/anims/samurai/caminar_samurai.png').convert_alpha(), 8, 110, 140, fondo_samurai)],
-            "run_b": [tint_surface(sprite, color_tinte1) for sprite in cargar_sprites(pygame.image.load('assets/anims/samurai/caminata_atras_samurai.png').convert_alpha(), 8, 110, 140, fondo_samurai)],
-            "jump": [tint_surface(sprite, color_tinte1) for sprite in cargar_sprites(pygame.image.load('assets/anims/samurai/salto_samurai.png').convert_alpha(), 5, 108.2, 140, fondo_samurai)],
-            "attack": [tint_surface(sprite, color_tinte1) for sprite in cargar_sprites(pygame.image.load('assets/anims/samurai/ataque_samurai.png').convert_alpha(), 5, 140, 140, fondo_samurai)],
-            "defense": [tint_surface(sprite, color_tinte1) for sprite in cargar_sprites(pygame.image.load('assets/anims/samurai/bloqueo_samurai.png').convert_alpha(), 2, 100, 140, fondo_samurai)],
-            'hit': [tint_surface(sprite, color_tinte1) for sprite in cargar_sprites(pygame.image.load('assets/anims/samurai/dañado_samurai.png').convert_alpha(), 5, 121.6, 140, fondo_samurai)],
-            'shoot': [tint_surface(sprite, color_tinte1) for sprite in cargar_sprites(pygame.image.load('assets/anims/samurai/disparo_samurai.png').convert_alpha(), 7, 195, 140, fondo_samurai)],
-            'death': [tint_surface(sprite, color_tinte1) for sprite in cargar_sprites(pygame.image.load('assets/anims/samurai/intro_samurai.png').convert_alpha(), 6, 150.5, 140, fondo_samurai)]
+            "idle": [pintar_superficie(sprite, color_tinte1) for sprite in cargar_sprites(pygame.image.load('assets/anims/samurai/idle_samurai.png').convert_alpha(), 10, 107.6, 140, fondo_samurai)],
+            "run": [pintar_superficie(sprite, color_tinte1) for sprite in cargar_sprites(pygame.image.load('assets/anims/samurai/caminar_samurai.png').convert_alpha(), 8, 110, 140, fondo_samurai)],
+            "run_b": [pintar_superficie(sprite, color_tinte1) for sprite in cargar_sprites(pygame.image.load('assets/anims/samurai/caminata_atras_samurai.png').convert_alpha(), 8, 110, 140, fondo_samurai)],
+            "jump": [pintar_superficie(sprite, color_tinte1) for sprite in cargar_sprites(pygame.image.load('assets/anims/samurai/salto_samurai.png').convert_alpha(), 5, 108.2, 140, fondo_samurai)],
+            "attack": [pintar_superficie(sprite, color_tinte1) for sprite in cargar_sprites(pygame.image.load('assets/anims/samurai/ataque_samurai.png').convert_alpha(), 5, 140, 140, fondo_samurai)],
+            "defense": [pintar_superficie(sprite, color_tinte1) for sprite in cargar_sprites(pygame.image.load('assets/anims/samurai/bloqueo_samurai.png').convert_alpha(), 2, 100, 140, fondo_samurai)],
+            'hit': [pintar_superficie(sprite, color_tinte1) for sprite in cargar_sprites(pygame.image.load('assets/anims/samurai/dañado_samurai.png').convert_alpha(), 5, 121.6, 140, fondo_samurai)],
+            'shoot': [pintar_superficie(sprite, color_tinte1) for sprite in cargar_sprites(pygame.image.load('assets/anims/samurai/disparo_samurai.png').convert_alpha(), 7, 195, 140, fondo_samurai)],
+            'death': [pintar_superficie(sprite, color_tinte1) for sprite in cargar_sprites(pygame.image.load('assets/anims/samurai/muerte_samurai.png').convert_alpha(), 9, 155, 120, fondo_samurai)]
         }
-        self.sprite_index = 0
-        self.image = self.animaciones[self.animacion_actual][self.sprite_index]
+        self.indice_sprite = 0
+        self.imagen = self.animaciones[self.animacion_actual][self.indice_sprite]
         self.tiempo_ultimo_sprite = pygame.time.get_ticks()
         self.tiempo_entre_sprites = 80  # Milisegundos entre cada frame de la animación
+    
+    def manejar_saltos(self, teclas, salto):
+        tiempo_actual = pygame.time.get_ticks()
+        if teclas[salto]: 
+            if self.dobles_saltos_restantes > 0 and (tiempo_actual - self.tiempo_ultimo_salto >= 500):
+                self.velocidad_y = -self.fuerza_salto
+                self.dobles_saltos_restantes -= 1
+                self.tiempo_ultimo_salto = tiempo_actual
+                if self.rectan.bottom > plataforma.top - 5:
+                    self.en_plataforma = False
+    
+    def actualizar(self, teclas, izq, derecha, salto, defensa, ataque, ataque_f, otro_jugador):
+        super().actualizar(teclas, izq, derecha, salto, defensa, ataque, ataque_f, otro_jugador)
+        if self.en_plataforma:
+            self.dobles_saltos_restantes = self.saltos_maximos
 
-class Anubis(Jugador):
+class Hanzo(Jugador):
     def __init__(self, rectan, aura):
         super().__init__(rectan, aura, velocidad=4, fuerza_salto=10)
         # Animaciones
-        self.double_jump = False
         self.cooldown_inicial = 1000
         self.animacion_actual = "idle"
         self.animaciones = {
-            "idle": [tint_surface(sprite, color_tinte2) for sprite in cargar_sprites(pygame.image.load('assets/anims/hanzo/Idle_Hanzo.png').convert_alpha(), 10, 100, 118, fondo)],
-            "run": [tint_surface(sprite, color_tinte2) for sprite in cargar_sprites(pygame.image.load('assets/anims/anubis/caminata_anubis.png').convert_alpha(), 8, 129, 98, fondo)],
-            "run_b": [tint_surface(sprite, color_tinte2) for sprite in cargar_sprites(pygame.image.load('assets/anims/anubis/caminata_anubis.png').convert_alpha(), 8, 129, 98, fondo)],
-            "jump": [tint_surface(sprite, color_tinte2) for sprite in cargar_sprites(pygame.image.load('assets/anims/anubis/salto_anubis.png').convert_alpha(), 8, 128.75, 98, fondo)],
-            "attack": [tint_surface(sprite, color_tinte2) for sprite in cargar_sprites(pygame.image.load('assets/anims/anubis/ataque_anubis.png').convert_alpha(), 8, 131.375, 98, fondo)],
-            "defense": [tint_surface(sprite, color_tinte2) for sprite in cargar_sprites(pygame.image.load('assets/anims/anubis/bloqueo_anubis.png').convert_alpha(), 10, 129, 98, fondo)],
-            'hit': [tint_surface(sprite, color_tinte2) for sprite in cargar_sprites(pygame.image.load('assets/anims/anubis/caminata_anubis.png').convert_alpha(), 8, 129, 98, fondo)],
-            'shoot': [tint_surface(sprite, color_tinte2) for sprite in cargar_sprites(pygame.image.load('assets/anims/anubis/caminata_anubis.png').convert_alpha(), 8, 129, 98, fondo)],
-            'death': [tint_surface(sprite, color_tinte2) for sprite in cargar_sprites(pygame.image.load('assets/anims/anubis/intro_anubis.png').convert_alpha(), 9, 128.8, 98, fondo)]
+            "idle": [pintar_superficie(sprite, color_tinte2) for sprite in cargar_sprites(pygame.image.load('assets/anims/hanzo/Idle_Hanzo.png').convert_alpha(), 10, 100, 118, fondo)],
+            "run": [pintar_superficie(sprite, color_tinte2) for sprite in cargar_sprites(pygame.image.load('assets/anims/anubis/caminata_anubis.png').convert_alpha(), 8, 129, 98, fondo)],
+            "run_b": [pintar_superficie(sprite, color_tinte2) for sprite in cargar_sprites(pygame.image.load('assets/anims/anubis/caminata_anubis.png').convert_alpha(), 8, 129, 98, fondo)],
+            "jump": [pintar_superficie(sprite, color_tinte2) for sprite in cargar_sprites(pygame.image.load('assets/anims/anubis/salto_anubis.png').convert_alpha(), 8, 128.75, 98, fondo)],
+            "attack": [pintar_superficie(sprite, color_tinte2) for sprite in cargar_sprites(pygame.image.load('assets/anims/anubis/ataque_anubis.png').convert_alpha(), 8, 131.375, 98, fondo)],
+            "defense": [pintar_superficie(sprite, color_tinte2) for sprite in cargar_sprites(pygame.image.load('assets/anims/anubis/bloqueo_anubis.png').convert_alpha(), 10, 129, 98, fondo)],
+            'hit': [pintar_superficie(sprite, color_tinte2) for sprite in cargar_sprites(pygame.image.load('assets/anims/anubis/caminata_anubis.png').convert_alpha(), 8, 129, 98, fondo)],
+            'shoot': [pintar_superficie(sprite, color_tinte2) for sprite in cargar_sprites(pygame.image.load('assets/anims/anubis/caminata_anubis.png').convert_alpha(), 8, 129, 98, fondo)],
+            'death': [pintar_superficie(sprite, color_tinte2) for sprite in cargar_sprites(pygame.image.load('assets/anims/anubis/intro_anubis.png').convert_alpha(), 9, 128.8, 98, fondo)]
         }
-        self.sprite_index = 0
-        self.image = self.animaciones[self.animacion_actual][self.sprite_index]
+        self.indice_sprite = 0
+        self.imagen = self.animaciones[self.animacion_actual][self.indice_sprite]
         self.tiempo_ultimo_sprite = pygame.time.get_ticks()
         self.tiempo_entre_sprites = 80  # Milisegundos entre cada frame de la animación
+
+    def disparar_proyectil(self, otro_jugador):
+        direccion = 1 if self.rectan.x < otro_jugador.rectan.x else -1
+        velocidad = 5
+        proyectil1 = Proyectil((self.rectan.centerx -20, self.rectan.centery), velocidad, direccion)
+        proyectil2 = Proyectil((self.rectan.centerx, self.rectan.centery - 30), velocidad, direccion)
+        self.proyectiles.append(proyectil1)
+        self.proyectiles.append(proyectil2)
 
 class Proyectil:
     def __init__(self, posicion, velocidad, direccion, sprites=None):
@@ -301,7 +325,7 @@ class Proyectil:
         self.sprites = sprites
         self.animacion_actual = "disparo"
         self.animaciones = {
-            "disparo": [tint_surface(sprite, color_tinte_proyectil) for sprite in cargar_sprites(pygame.image.load('assets/anims/samurai/proyectil_samurai.png').convert_alpha(), 3, 132, 30, fondo_samurai)],
+            "disparo": [pintar_superficie(sprite, color_tinte_proyectil) for sprite in cargar_sprites(pygame.image.load('assets/anims/samurai/proyectil_samurai.png').convert_alpha(), 3, 132, 30, fondo_samurai)],
         }
         self.sprite_index = 0
         self.image = self.animaciones[self.animacion_actual][self.sprite_index]
@@ -318,7 +342,7 @@ class Proyectil:
 class Juego:
     def __init__(self):
         self.jugador1 = Samurai(pygame.Rect(pantalla_ancho // 2 - 240, 200, 80, 130), pygame.Rect(pantalla_ancho // 2 - 240, 200, 115, 130))
-        self.jugador2 = Anubis(pygame.Rect(pantalla_ancho // 2 + 240, 200, 80, 115), pygame.Rect(pantalla_ancho // 2 + 240, 200, 115, 130))
+        self.jugador2 = Hanzo(pygame.Rect(pantalla_ancho // 2 + 240, 200, 80, 115), pygame.Rect(pantalla_ancho // 2 + 240, 200, 115, 130))
         self.ejecutando = True
         # Cargar la imagen de fondo
         self.fondo = pygame.image.load("assets/images/img1.jpeg")
@@ -435,8 +459,8 @@ class Juego:
                 pantalla.blit(self.fondo, (0, 0))
 
                 # Dibujar todo en la pantalla
-                pantalla.blit(self.jugador1.image, self.jugador1.rectan.topleft)
-                pantalla.blit(self.jugador2.image, self.jugador2.rectan.topleft)
+                pantalla.blit(self.jugador1.imagen, self.jugador1.rectan.topleft)
+                pantalla.blit(self.jugador2.imagen, self.jugador2.rectan.topleft)
                 pantalla.blit(imagen_plataforma, plataforma)
 
                 # Dibujar las auras para visualización (opcional)
@@ -479,7 +503,7 @@ juego = Juego()
 juego.ejecutar()
 
 # Mecánicas:
-# Agregar algo que diferencie a Hanzo y samurai; evento de muerte al caer de la plataforma; agregar direcciones a cada personaje; ver como hacer bordes redondeados de plataforma
+# Agregar algo que diferencie a Hanzo de samurai; evento de muerte al caer de la plataforma; agregar direcciones a cada personaje; ver como hacer bordes redondeados de plataforma
 # Animaciones:
 # terminar de añadir animaciones para Hanzo; hacer que las animaciones tengan su espejo; mejorar animación de bloqueo de samurai; 
 # segun que dirección tenga es pj es una animación en espejo o no; añadir animación de ataque especial samurai
