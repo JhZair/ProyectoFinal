@@ -2,10 +2,6 @@ import pygame
 import pygame.gfxdraw
 from config import *
 
-# Inicializa Pygame
-pygame.init()
-
-
 # Cargar la imagen de la plataforma
 imagen_plataforma = pygame.image.load('assets/images/plataforma2.jpg').convert_alpha()
 plataforma = pygame.Rect(200, 550, pantalla_ancho - 400, 500)
