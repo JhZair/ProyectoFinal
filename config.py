@@ -1,6 +1,8 @@
 import pygame
 
-pantalla_ancho = 1700
-pantalla_alto = 1000
+pantalla_ancho = 1920
+pantalla_alto = 1080
 
 pantalla = pygame.display.set_mode((pantalla_ancho, pantalla_alto))
+
+nombre_juego = "Pelea de aprendices"

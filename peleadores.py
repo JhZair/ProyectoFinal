@@ -22,12 +22,16 @@ class Jugador:
         self.velocidad = velocidad
         self.velocidad_inicial = velocidad
         self.fuerza_salto = fuerza_salto
-        self.gravedad = 1.9
+        self.__gravedad = 1.9
         self.velocidad_y = 0
         self.en_plataforma = False
         self.max_salud = 700
         self.salud = self.max_salud
         self.vidas = 2
+        self.imagen_primera_vida = pygame.image.load('assets/images/barra_de_vida2.png').convert_alpha()
+        self.imagen_segunda_vida = pygame.image.load('assets/images/barra_de_vida.png').convert_alpha()
+        self.imagen_barra_ataque = pygame.image.load('assets/images/barra_de_ataque.png').convert_alpha()
+        self.imagen_barra_margen = pygame.image.load('assets/images/barra.png').convert_alpha()
         self.reapareciendo = False
         self.cooldown_inicial = cooldown_inicial
         self.cooldown = 0
@@ -36,9 +40,15 @@ class Jugador:
         self.retroceso_x = 0
         self.retroceso_y = 0
         self.proyectiles = []
+        self.cooldown_animacion = 0
 
-    def actualizar(self, teclas, izq, derecha, salto, defensa, ataque, ataque_s, ataque_p, otro_jugador):
+    def actualizar(self, teclas, izq, derecha, salto, defensa, ataque, ataque_s, ataque_p, emote, otro_jugador):
         tiempo = pygame.time.get_ticks()
+        # Resetear animación a idle al inicio de la actualización si no hay otro cooldown activo
+        if self.cooldown <= tiempo and self.cooldown_animacion <= tiempo and not self.reapareciendo:
+            self.animacion_actual = "idle"
+
+        # Animación de movimiento hacia la izquierda
         if teclas[izq]:
             if self.en_plataforma:
                 self.animacion_actual = "run_b"
@@ -48,6 +58,7 @@ class Jugador:
                 self.rectan.left = plataforma.right
                 self.aura.left = plataforma.right
     
+        # Animación de movimiento hacia la derecha
         if teclas[derecha]:
             if self.en_plataforma:
                 self.animacion_actual = "run"
@@ -60,39 +71,52 @@ class Jugador:
         # Manejar los saltos (implementado en las subclases)
         self.manejar_saltos(teclas, salto)
 
-        if not self.en_plataforma and otro_jugador.animacion_actual != 'attack':
+        # Animación de salto
+        if not self.en_plataforma and self.animacion_actual not in ["attack", "attack_s", "shoot"] and not self.proyectiles:
             self.animacion_actual = "jump"
-        
-        if teclas[ataque] and self.cooldown > tiempo:
+
+        # Animación de ataque
+        if teclas[ataque] and self.cooldown_animacion <= tiempo:
             self.animacion_actual = "attack"
+            self.cooldown_animacion = tiempo + 300
             if self.rectan.colliderect(otro_jugador.rectan):
                 otro_jugador.animacion_actual = "hit"
-        
-        if teclas[ataque_s] and self.ataque_especial == 200 and self.rectan.colliderect(otro_jugador.rectan):
-            self.animacion_actual = "attack_s"
-            otro_jugador.animacion_actual = "hit"
-        
-        if teclas[ataque_p]:
-            self.animacion_actual = "shoot"
+                otro_jugador.cooldown_animacion = tiempo + 500
 
+        # Animación de ataque especial
+        if teclas[ataque_s] and self.ataque_especial == 200 and self.rectan.colliderect(otro_jugador.rectan) and self.cooldown_animacion <= tiempo:
+            self.animacion_actual = "attack_s"
+            self.cooldown_animacion = tiempo + 800 
+            otro_jugador.animacion_actual = "hit"
+            otro_jugador.cooldown_animacion = tiempo + 500
+
+        # Animación de disparo
+        if teclas[ataque_p] and self.cooldown_animacion <= tiempo:
+            self.animacion_actual = "shoot"
+            self.cooldown_animacion = tiempo + 100
+
+        # Animación de defensa
         self.defendiendo = teclas[defensa]
         if self.defendiendo:
             self.velocidad = self.velocidad_inicial * 0.2
             self.animacion_actual = "defense"
         else:
             self.velocidad = self.velocidad_inicial
-        
+
+        # Animación de muerte
         if self.reapareciendo:
             self.animacion_actual = "death"
+            self.cooldown_animacion = tiempo + 150
 
-        if self.cooldown < tiempo and not (teclas[izq] or teclas[derecha] or teclas[salto] or teclas[defensa] or teclas[ataque_s]) and otro_jugador.animacion_actual != 'attack' and self.animacion_actual != "hit" and self.en_plataforma:
-            self.animacion_actual = "idle"
+        if teclas[emote] and self.cooldown_animacion <= tiempo:
+            self.animacion_actual = "intro_vict"
+            self.cooldown_animacion = tiempo + 200
 
         # Aplicar gravedad
         self.rectan.y += self.velocidad_y
         self.aura.y += self.velocidad_y
-        self.velocidad_y += self.gravedad
-        if self.velocidad_y > 18:
+        self.velocidad_y += self.__gravedad
+        if self.velocidad_y > 20:
             self.en_plataforma = False
 
         # Aplicar retroceso
@@ -115,7 +139,6 @@ class Jugador:
                 self.reapareciendo = False
             else:
                 self.en_plataforma = False
-
         # Actualizar animación
         if tiempo - self.tiempo_ultimo_sprite > self.tiempo_entre_sprites:
             self.tiempo_ultimo_sprite = tiempo
@@ -171,37 +194,55 @@ class Jugador:
     def dibujar_barra_salud(self, posicion, espejo=False):
         ancho_barra = self.max_salud
         alto_barra = 30
+        # Dibujar la barra de margen detrás de todas las barras de vida
+        imagen_margen = pygame.transform.scale(self.imagen_barra_margen, (ancho_barra + 61, alto_barra + 20))
+        if espejo:
+            imagen_margen = pygame.transform.flip(imagen_margen, True, False)
+            pantalla.blit(imagen_margen, (posicion[0] - ancho_barra - 29, 0))
+        else:
+            pantalla.blit(imagen_margen, (-22,0))
+
         if self.vidas == 2:
+            # Primera barra de vida completa
+            progreso_ancho = self.salud
+            progreso = pygame.transform.scale(self.imagen_primera_vida, (progreso_ancho, alto_barra))
+            progreso_barra2 = pygame.transform.scale(self.imagen_segunda_vida, (ancho_barra, alto_barra))
             if espejo:
-                barra = pygame.Rect(posicion[0] - ancho_barra, posicion[1], ancho_barra, alto_barra)
-                progreso_primera_vida = pygame.Rect(posicion[0] - self.salud, posicion[1], self.salud, alto_barra)
+                progreso_barra2 = pygame.transform.flip(progreso_barra2, True, False)
+                progreso = pygame.transform.flip(progreso, True, False)
+                pantalla.blit(progreso_barra2, (posicion[0] - ancho_barra, posicion[1]))
+                pantalla.blit(progreso, (posicion[0] - progreso_ancho, posicion[1]))
             else:
-                barra = pygame.Rect(posicion[0], posicion[1], ancho_barra, alto_barra)
-                progreso_primera_vida = pygame.Rect(posicion[0], posicion[1], self.salud, alto_barra)
-            pygame.draw.rect(pantalla, verde_vd, barra)  # Dibujar el contorno de la barra
-            pygame.draw.rect(pantalla, amarillo_vd, progreso_primera_vida)  # Barra amarilla para la primera vida
+                pantalla.blit(progreso_barra2, posicion)
+                pantalla.blit(progreso, posicion)
         elif self.vidas == 1:
+            # Segunda barra de vida
+            progreso_ancho = self.salud
+            progreso = pygame.transform.scale(self.imagen_segunda_vida, (progreso_ancho, alto_barra))
             if espejo:
-                barra = pygame.Rect(posicion[0] - ancho_barra, posicion[1], ancho_barra, alto_barra)
-                progreso = pygame.Rect(posicion[0] - self.salud, posicion[1], self.salud, alto_barra)
+                progreso = pygame.transform.flip(progreso, True, False)
+                pantalla.blit(progreso, (posicion[0] - progreso_ancho, posicion[1]))
             else:
-                barra = pygame.Rect(posicion[0], posicion[1], ancho_barra, alto_barra)
-                progreso = pygame.Rect(posicion[0], posicion[1], self.salud, alto_barra)
-            pygame.draw.rect(pantalla, blanco, barra)  # Dibujar el contorno de la barra
-            pygame.draw.rect(pantalla, verde_vd, progreso)  # Barra roja para la vida restante
+                pantalla.blit(progreso, posicion)
 
     def dibujar_ataque_especial(self, posicion, espejo=False):
         ancho_barra = 200
         alto_barra = 15
+        progreso_ancho = self.ataque_especial
+        # Dibujar la barra de margen detrás de la barra de ataque especial
+        imagen_margen = pygame.transform.scale(self.imagen_barra_margen, (ancho_barra + 26, alto_barra + 9))
         if espejo:
-            barra = pygame.Rect(posicion[0] - ancho_barra, posicion[1], ancho_barra, alto_barra)
-            progreso = pygame.Rect(posicion[0] - self.ataque_especial, posicion[1], self.ataque_especial, alto_barra)
+            imagen_margen = pygame.transform.flip(imagen_margen, True, False)
+            pantalla.blit(imagen_margen, (posicion[0] - ancho_barra - 12, posicion[1] - 4))
         else:
-            barra = pygame.Rect(posicion[0], posicion[1], ancho_barra, alto_barra)
-            progreso = pygame.Rect(posicion[0], posicion[1], self.ataque_especial, alto_barra)
-        pygame.draw.rect(pantalla, blanco, barra)
-        pygame.draw.rect(pantalla, azul_ats, progreso)
-    
+            pantalla.blit(imagen_margen, (-4, 46))
+        progreso = pygame.transform.scale(self.imagen_barra_ataque, (progreso_ancho, alto_barra))
+        if espejo:
+            progreso = pygame.transform.flip(progreso, True, False)
+            pantalla.blit(progreso, (posicion[0] - progreso_ancho, posicion[1]))
+        else:
+            pantalla.blit(progreso, posicion)
+
     def disparar_proyectil(self, otro_jugador):
         direccion = 1 if self.rectan.x < otro_jugador.rectan.x else -1
         velocidad = 20
@@ -231,7 +272,7 @@ class Samurai(Jugador):
         self.indice_sprite = 0
         self.imagen = self.animaciones[self.animacion_actual][self.indice_sprite]
         self.tiempo_ultimo_sprite = pygame.time.get_ticks()
-        self.tiempo_entre_sprites = 80  # Milisegundos entre cada frame de la animación
+        self.tiempo_entre_sprites = 70  # Milisegundos entre cada frame de la animación
     
     def cargar_animaciones(self, espejo):
         return {
@@ -258,15 +299,14 @@ class Samurai(Jugador):
                 if self.rectan.bottom > plataforma.top - 5:
                     self.en_plataforma = False
     
-    def actualizar(self, teclas, izq, derecha, salto, defensa, ataque, ataque_s, ataque_p, otro_jugador):
-        super().actualizar(teclas, izq, derecha, salto, defensa, ataque, ataque_s,ataque_p, otro_jugador)
+    def actualizar(self, teclas, izq, derecha, salto, defensa, ataque, ataque_s, ataque_p, emote, otro_jugador):
+        super().actualizar(teclas, izq, derecha, salto, defensa, ataque, ataque_s,ataque_p,  emote, otro_jugador)
         if self.en_plataforma:
             self.dobles_saltos_restantes = self.saltos_maximos
 
 class Hanzo(Jugador):
     def __init__(self, rectan, aura):
         super().__init__(rectan, aura, velocidad=9, fuerza_salto=21)
-        # Animaciones
         self.cooldown_inicial = 1000
         self.espejado = False
         self.animacion_actual = "idle"
