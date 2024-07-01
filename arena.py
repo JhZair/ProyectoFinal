@@ -4,7 +4,7 @@ from config import *
 
 # Cargar la imagen de la plataforma
 imagen_plataforma = pygame.image.load('assets/images/plataforma2.jpg').convert_alpha()
-plataforma = pygame.Rect(200, 550, pantalla_ancho - 400, 500)
+plataforma = pygame.Rect(200, 550, pantalla_ancho - 400, 700)
 imagen_plataforma = pygame.transform.scale(imagen_plataforma, (plataforma.width, plataforma.height))
 
 # Crear una superficie con bordes redondeados

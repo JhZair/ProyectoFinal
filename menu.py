@@ -28,7 +28,7 @@ for f in sorted(os.listdir(ruta_cuadros)):
 
 # Variables para controlar la animación
 indice_cuadro = 0
-tiempo_entre_cuadros = 100  # Milisegundos entre cuadros
+tiempo_entre_cuadros = 80  # Milisegundos entre cuadros
 tiempo_ultimo_cuadro = pygame.time.get_ticks()
 
 # Función para mostrar el menú
