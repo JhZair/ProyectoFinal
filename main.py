@@ -1,5 +1,4 @@
 import pygame
-import sys
 from config import *
 import pygame.locals
 from menu import mostrar_menu
@@ -202,7 +201,6 @@ class Juego:
                     for evento in pygame.event.get():
                         if evento.type == pygame.QUIT:
                             pygame.quit()
-                            sys.exit()
 
                     # Obtener el estado de las teclas
                     teclas = pygame.key.get_pressed()
