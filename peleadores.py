@@ -261,7 +261,8 @@ class Jugador:
 
 class Samurai(Jugador):
     def __init__(self, rectan, aura):
-        super().__init__(rectan, aura, velocidad=10, fuerza_salto=15)
+        super().__init__(rectan, aura, velocidad=13, fuerza_salto=15)
+        self.cooldown_inicial = 600
         self.saltos_maximos = 2
         self.dobles_saltos_restantes = self.saltos_maximos
         self.tiempo_ultimo_salto = 0
@@ -306,7 +307,7 @@ class Samurai(Jugador):
 
 class Hanzo(Jugador):
     def __init__(self, rectan, aura):
-        super().__init__(rectan, aura, velocidad=9, fuerza_salto=21)
+        super().__init__(rectan, aura, velocidad=9, fuerza_salto=19)
         self.cooldown_inicial = 1000
         self.espejado = False
         self.animacion_actual = "idle"

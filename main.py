@@ -21,7 +21,7 @@ reloj = pygame.time.Clock()
 fuente = pygame.font.Font("assets/fonts/upheavtt.ttf", 60)
 
 # Duración de la partida en segundos
-duracion_partida = 360
+duracion_partida = 90
 inicio_tiempo = pygame.time.get_ticks()
         
 class Juego:
@@ -42,15 +42,16 @@ class Juego:
         direccionj2 = 1 if self.jugador2.rectan.x > self.jugador1.rectan.x else -1
         if teclas[ataque_j1] and tiempo_actual > self.jugador1.cooldown:
             if self.jugador1.aura.colliderect(self.jugador2.aura) and teclas[ataque_j1] and tiempo_actual > self.jugador1.cooldown and not self.jugador1.defendiendo:
-                self.jugador1.incrementar_ataque_especial(50)
-                cantidad_retroceso = (20, -15)
+                self.jugador2.en_plataforma = False
+                cantidad_retroceso = (30, -15)
                 if self.jugador2.defendiendo:
-                    if self.jugador2.bajar_salud(10, cantidad_retroceso, direccionj1):
+                    if self.jugador2.bajar_salud(15, cantidad_retroceso, direccionj1):
                         print("Jugador 2 ha sido derrotado")
                         self.mostrar_ganador("Jugador 1")
                         return True
                 else:
-                    if self.jugador2.bajar_salud(30, cantidad_retroceso, direccionj1):
+                    self.jugador1.incrementar_ataque_especial(50)
+                    if self.jugador2.bajar_salud(50, cantidad_retroceso, direccionj1):
                         print("Jugador 2 ha sido derrotado")
                         self.mostrar_ganador("Jugador 1")
                         return True
@@ -58,15 +59,16 @@ class Juego:
 
         if teclas[ataque_j2] and tiempo_actual > self.jugador2.cooldown:
             if self.jugador2.aura.colliderect(self.jugador1.aura) and teclas[ataque_j2] and tiempo_actual > self.jugador2.cooldown and not self.jugador2.defendiendo:
-                self.jugador2.incrementar_ataque_especial(50)
-                cantidad_retroceso = (-20, -15)
+                self.jugador1.en_plataforma = False
+                cantidad_retroceso = (-25, -15)
                 if self.jugador1.defendiendo:
                     if self.jugador1.bajar_salud(10, cantidad_retroceso,direccionj2):
                         print("Jugador 1 ha sido derrotado")
                         self.mostrar_ganador("Jugador 2")
                         return True
                 else:
-                    if self.jugador1.bajar_salud(30, cantidad_retroceso, direccionj2):
+                    self.jugador2.incrementar_ataque_especial(50)
+                    if self.jugador1.bajar_salud(40, cantidad_retroceso, direccionj2):
                         print("Jugador 1 ha sido derrotado")
                         self.mostrar_ganador("Jugador 2")
                         return True
@@ -74,7 +76,7 @@ class Juego:
 
         # Verificar si el jugador cae fuera de la pantalla
         if self.jugador1.rectan.top > pantalla_alto:
-            if self.jugador1.vidas == 2:
+            if self.jugador1.vidas >= 1:
                 self.jugador1.perder_vida()
             else:
                 print("Jugador 1 ha sido derrotado")
@@ -82,7 +84,7 @@ class Juego:
                 return True
             
         if self.jugador2.rectan.top > pantalla_alto:
-            if self.jugador2.vidas == 2:
+            if self.jugador2.vidas >= 1:
                 self.jugador2.perder_vida()
             else:
                 print("Jugador 2 ha sido derrotado")
@@ -153,12 +155,17 @@ class Juego:
         if self.jugador1.salud > self.jugador2.salud:
             print("Jugador 1 gana por salud")
             self.mostrar_ganador("Jugador 1")
-            self.jugador1.animacion_actual = "intro_vict"
-        elif self.jugador2.salud > self.jugador1.salud:
+        if self.jugador2.salud > self.jugador1.salud:
             print("Jugador 2 gana por salud")
             self.mostrar_ganador("Jugador 2")
-        else:
-            print("Empate")
+        if self.jugador2.salud == self.jugador1.salud:
+            fuente = pygame.font.Font("assets/fonts/upheavtt.ttf", 80)
+            texto = fuente.render("EMPATE!", True, (255, 255, 255))
+            rect_texto = texto.get_rect(center=(pantalla_ancho // 2, pantalla_alto // 2 - 50))
+            pantalla.blit(texto, rect_texto)
+            pygame.display.flip()
+            pygame.time.delay(5000)
+            self.ejecutando = False
     
     def mostrar_ganador(self, ganador):
         fuente_ganador = pygame.font.Font("assets/fonts/upheavtt.ttf", 80)
@@ -244,7 +251,7 @@ class Juego:
 
                     # Verificar si el tiempo se ha agotado
                     if tiempo_restante <= 0:
-                        self.determinar_ganador()
+                        self.ganador_por_tiempo()
                         break
 
                     # Actualizar la pantalla
